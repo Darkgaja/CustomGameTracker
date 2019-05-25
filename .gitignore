@@ -1,0 +1,12 @@
+# Generated files
+node_modules
+dist
+
+# Database Files
+*.db
+# Keys
+.env
+players.json
+
+# Visual Studio Code
+.vscode

@@ -1,0 +1,39 @@
+{
+  "name": "custom-game-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/Server.js --production",
+    "full": "tsc && node ./dist/Server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Darkgaja/CustomGameTracker.git"
+  },
+  "author": "Mark Sujew",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Darkgaja/CustomGameTracker/issues"
+  },
+  "homepage": "https://github.com/Darkgaja/CustomGameTracker#readme",
+  "dependencies": {
+    "@types/body-parser": "^1.17.0",
+    "@types/express": "^4.16.1",
+    "@types/fs-extra": "^7.0.0",
+    "@types/morgan": "^1.7.35",
+    "@types/request": "^2.48.1",
+    "@types/request-promise-native": "^1.0.16",
+    "body-parser": "^1.19.0",
+    "dotenv": "^8.0.0",
+    "express": "4.17.0",
+    "fs-extra": "^8.0.1",
+    "kayn": "^0.9.8",
+    "morgan": "^1.9.1",
+    "reflect-metadata": "^0.1.13",
+    "sqlite3": "^4.0.8",
+    "typeorm": "0.2.17",
+    "typescript": "3.4.5"
+  }
+}
