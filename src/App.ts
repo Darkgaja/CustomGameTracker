@@ -38,9 +38,11 @@ class App {
         let playerItems = JSON.parse(playerText.toString("UTF-8"));
         for (let playerName of playerItems) {
             let player = await Player.findByUsername(kayn, playerName);
-            console.log(player);
             if (player) {
+                console.log("Player loaded: " + player.name);
                 this.players.push(player);
+            } else {
+                console.log("Could not load player: " + playerName);
             }
         }
 

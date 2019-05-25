@@ -37,7 +37,12 @@ export class Player extends BaseEntity {
         if (dbPlayer) {
             return dbPlayer;
         } else {
-            let kaynPlayer = await kayn.Summoner.by.name(name)
+            let kaynPlayer: SummonerV4SummonerDTO;
+            try {
+                kaynPlayer = await kayn.Summoner.by.name(name)
+            } catch {
+                return undefined;
+            }
 
             if (kaynPlayer.id) {
                 let player = new Player();
