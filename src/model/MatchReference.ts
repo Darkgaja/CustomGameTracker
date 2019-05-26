@@ -1,7 +1,6 @@
-import { Entity, PrimaryColumn, Column, ManyToMany, ManyToOne, JoinTable, JoinColumn, BaseEntity } from "typeorm";
-import { KaynClass } from "kayn";
-import { MatchV4MatchReferenceDto, SpectatorV4CurrentGameInfo } from "kayn/typings/dtos";
-import { Match } from "./Match";
+import { Entity, PrimaryColumn, Column, BaseEntity } from "typeorm";
+import { SpectatorV4CurrentGameParticipant } from "kayn/typings/dtos";
+import { Champion } from "./Champion";
 
 @Entity()
 export class MatchReference extends BaseEntity {
@@ -13,48 +12,28 @@ export class MatchReference extends BaseEntity {
     summonerId: string = "";
 
     @Column()
+    summonerName: string = "";
+
+    @Column()
+    teamId: number = 100;
+    
+    @Column()
     champion: number = 0;
 
     @Column()
-    gameType: string = "";
+    championName: string = "";
 
-    isNew: boolean = false;
-
-    public static async findByAccountId(kayn: KaynClass, summonerId: string): Promise<MatchReference | undefined> {
-        let ddragon: SpectatorV4CurrentGameInfo;
-        try {
-            ddragon = await kayn.CurrentGame.by.summonerID(summonerId);
-        } catch {
-            return undefined;
+    public static async fromParticipant(participant: SpectatorV4CurrentGameParticipant, gameId: number): Promise<MatchReference> {
+        let ref = new MatchReference();
+        ref.gameId = gameId;
+        ref.teamId = <number>participant.teamId;
+        ref.summonerId = <string>participant.summonerId;
+        ref.summonerName = <string>participant.summonerName;
+        ref.champion = <number>participant.championId;
+        let champ = await Champion.findOne({ where: { key: ref.champion }});
+        if (champ) {
+            ref.championName = champ.name;
         }
-        
-        if (ddragon) {
-            let match = await this.findOne({ where: { gameId: ddragon.gameId, summonerId: summonerId } });
-            if (!match) {
-                match = new MatchReference();
-                match.isNew = true;
-                match.copy(ddragon, summonerId);
-                await match.save();
-            }
-            return match;
-        }
-        return undefined;
-    }
-
-    public copy(matchReference: SpectatorV4CurrentGameInfo, summonerId: string) {
-        this.gameId = <number>matchReference.gameId;
-        this.gameType = <string>matchReference.gameType;
-        this.summonerId = summonerId;
-        if (matchReference.participants) {
-            for (let participant of matchReference.participants) {
-                if (participant.summonerId == summonerId) {
-                    this.champion = <number>participant.championId;
-                }
-            }
-        }
-    }
-
-    public async getMatch(kayn: KaynClass): Promise<Match | undefined> {
-        return await Match.findByMatchId(kayn, this.gameId);
+        return ref;
     }
 }

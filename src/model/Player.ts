@@ -1,8 +1,7 @@
-import { Entity, PrimaryColumn, Column, ManyToMany, ManyToOne, JoinTable, JoinColumn, BaseEntity } from "typeorm";
+import { Entity, PrimaryColumn, Column, BaseEntity } from "typeorm";
 import { KaynClass } from "kayn";
 import { SummonerV4SummonerDTO } from "kayn/typings/dtos";
-import { MatchReference } from "./MatchReference";
-import { Champion } from "./Champion";
+import { Match } from "./Match";
 
 @Entity()
 export class Player extends BaseEntity {
@@ -31,7 +30,7 @@ export class Player extends BaseEntity {
     @Column()
     team: string = "";
 
-    public static async findByUsername(kayn: KaynClass, name: string): Promise<Player | undefined> {
+    public static async findByUsername(kayn: KaynClass, name: string, team: string | undefined): Promise<Player | undefined> {
         let dbPlayer = await this.findOne({ where: { name: name } });
 
         if (dbPlayer) {
@@ -47,6 +46,9 @@ export class Player extends BaseEntity {
             if (kaynPlayer.id) {
                 let player = new Player();
                 player.copy(kaynPlayer);
+                if (team) {
+                    player.team = team;
+                }
                 await player.save();
                 return player;
             } else {
@@ -67,16 +69,13 @@ export class Player extends BaseEntity {
         this.accountId = <string>kaynPlayer.accountId;
     }
 
-    public async nextAction(kayn: KaynClass): Promise<boolean> {
-        let matchRef = await MatchReference.findByAccountId(kayn, this.id);
-        let result = false;
-        if (matchRef && matchRef.isNew) {
-            let champ = await Champion.findById(matchRef.champion);
-            if (matchRef.gameType == "CUSTOM_GAME" && champ) {
-                console.log(`User '${this.name}' playing ${champ.name} in custom game ${matchRef.gameId}`);
+    public async nextAction(kayn: KaynClass) {
+        let match = await Match.findByAccountId(kayn, this.id);
+        if (match && match.isNew) {
+            let champ = await match.findChampion(this.id);
+            if (champ) {
+                console.log(`User '${this.name}' playing ${champ} in game ${match.gameId}`);
             }
-            result = true;
         }
-        return result;
     }
 }

@@ -2,14 +2,12 @@ import * as express from "express";
 import * as bodyParser from "body-parser";
 import * as morgan from "morgan";
 
-import "./model/Player";
-//import ConverterRoutes from "./routes/ConverterRoutes";
 import { NextFunction } from "connect";
 import { Player } from "./model/Player";
-import { Clock } from "./Clock";
-import { KaynClass } from "kayn";
+import { KaynClass, Kayn, REGIONS } from "kayn";
 import { readFile } from "fs-extra";
 import { Champion } from "./model/Champion";
+import { Match } from "./model/Match";
 
 declare global {
     interface Error {
@@ -24,41 +22,86 @@ class App {
     public actions: Function[] = [];
 
     private players: Player[] = [];
+    private lastKey: string = "";
 
     constructor() {
         this.app = express();
         this.config();
     }
 
-    public async query(kayn: KaynClass) {
-        let clock = new Clock();
-        clock.delay = 900;
-
-        let playerText = await readFile("players.json");
-        let playerItems = JSON.parse(playerText.toString("UTF-8"));
-        for (let playerName of playerItems) {
-            let player = await Player.findByUsername(kayn, playerName);
-            if (player) {
-                console.log("Player loaded: " + player.name);
-                this.players.push(player);
-            } else {
-                console.log("Could not load player: " + playerName);
-            }
-        }
-
+    public async query() {
+        let kayn = this.loadKayn();
+        await this.loadPlayers(kayn);
         await Champion.populateStatic(kayn);
 
 
-        if (this.players.length > 0) {
-            while (true) {
-                for (let player of this.players) {
-                    let didSomething = await player.nextAction(kayn);
-                    if (didSomething) {
-                        await clock.waitFor();
-                    }
+        while (true) {
+            for (let player of this.players) {
+                try {
+                    await player.nextAction(kayn);
+                } catch (err) {
+                    console.log(err);
                 }
             }
+            let unfinishedMatches = await Match.find({ where: { gameType: "MATCHED_GAME", winningTeamId: 0 }});
+            for (let match of unfinishedMatches) {
+                await match.identifyResult(kayn);
+            }
+
+            await this.loadPlayers(kayn);
+
+            require("dotenv").config();
+            if (this.lastKey != process.env.RIOT_LOL_API_KEY) {
+                kayn = this.loadKayn();
+            }
         }
+    }
+
+    private async loadPlayers(kayn: KaynClass) {
+        let playerItems: any;
+        try {
+            let playerText = await readFile("players.json");
+            playerItems = JSON.parse(playerText.toString("UTF-8"));
+        } catch {
+            console.log("Could not load players.json file");
+            return;
+        }
+        
+        this.players = [];
+        for (let playerItem of playerItems) {
+            let player = await Player.findByUsername(kayn, playerItem.name, playerItem.team);
+            if (player) {
+                this.players.push(player);
+            } else {
+                console.log("Could not load player: " + playerItem.name);
+            }
+        }
+    }
+
+    private loadKayn() {
+        this.lastKey = <string>process.env.RIOT_LOL_API_KEY;
+        return Kayn(this.lastKey)({
+            region: REGIONS.EUROPE_WEST,
+            debugOptions: {
+                isEnabled: true,
+                showKey: false,
+            },
+            requestOptions: {
+                shouldRetry: true,
+                numberOfRetriesBeforeAbort: 3,
+                delayBeforeRetry: 1000,
+                burst: false,
+                shouldExitOn403: false,
+            },
+            cacheOptions: {
+                cache: null,
+                timeToLives: {
+                    useDefault: false,
+                    byGroup: {},
+                    byMethod: {},
+                },
+            },
+        })
     }
 
     private config() {

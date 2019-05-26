@@ -15,5 +15,5 @@ COPY . .
 # Running the typescript compiler
 RUN npm run build
 
-EXPOSE 3030
+EXPOSE 4040
 CMD [ "npm", "start" ]
